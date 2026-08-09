@@ -62,19 +62,29 @@
 
         /* Modern Top App Header */
         .brand-showcase {
-            background: rgba(13, 20, 32, 0.85);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--card-border);
-            border-radius: 20px;
-            padding: 12px 16px;
+            background: linear-gradient(160deg, rgba(21, 32, 50, 0.92), rgba(7, 11, 19, 0.9));
+            backdrop-filter: blur(18px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 22px;
+            padding: 10px 14px 10px 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
             position: sticky;
             top: 10px;
             z-index: 1000;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .brand-showcase::after {
+            content: '';
+            position: absolute;
+            left: 16px; right: 16px; top: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.55), transparent);
         }
 
         .header-left {
@@ -83,32 +93,47 @@
             gap: 12px;
         }
 
-        .hamburger-btn {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--card-border);
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
+        .brand-cluster {
             display: flex;
-            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            padding: 5px 14px 5px 5px;
+        }
+
+        .brand-divider {
+            width: 1px;
+            align-self: stretch;
+            margin: 4px 0;
+            background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.14), transparent);
+        }
+
+        .hamburger-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #a7b4c9;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
             align-items: center;
             justify-content: center;
-            gap: 5px;
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .hamburger-btn:active {
-            transform: scale(0.92);
-            border-color: var(--primary-blue);
+        .hamburger-btn svg { width: 18px; height: 18px; }
+
+        .hamburger-btn:hover {
+            border-color: rgba(37, 99, 235, 0.45);
+            background: rgba(37, 99, 235, 0.1);
+            color: #ffffff;
         }
 
-        .hamburger-btn span {
-            width: 18px;
-            height: 2px;
-            background-color: #94a3b8;
-            border-radius: 2px;
-            transition: 0.3s;
+        .hamburger-btn:active {
+            transform: scale(0.92);
         }
 
         .brand-logo-container {
@@ -125,7 +150,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 0 15px var(--primary-glow);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18) inset, 0 0 18px rgba(37, 99, 235, 0.55);
             border: 1px solid rgba(255, 255, 255, 0.2);
             overflow: hidden;
             padding: 4px;
@@ -146,29 +171,33 @@
         .brand-name {
             font-size: 15px;
             font-weight: 800;
-            letter-spacing: -0.2px;
-            color: #ffffff;
+            letter-spacing: -0.3px;
+            background: linear-gradient(90deg, #ffffff, #c9d6ee);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
 
         .brand-tagline {
             font-size: 9px;
             color: var(--text-muted);
             font-weight: 700;
-            letter-spacing: 1px;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
         }
 
         .header-status-pill {
-            background: rgba(16, 185, 129, 0.1);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.16), rgba(16, 185, 129, 0.04));
+            border: 1px solid rgba(16, 185, 129, 0.28);
             color: var(--badge-green);
-            padding: 5px 10px;
+            padding: 6px 12px;
             border-radius: 20px;
             font-size: 10px;
             font-weight: 700;
             display: flex;
             align-items: center;
             gap: 6px;
+            box-shadow: 0 0 14px rgba(16, 185, 129, 0.14);
         }
 
         .pulse-dot {
@@ -941,24 +970,25 @@
     <!-- Header Showcase with Side Panel Trigger -->
     <div class="brand-showcase">
         <div class="header-left">
-            <button class="hamburger-btn" onclick="openSidePanel()">
-                <span></span>
-                <span></span>
-                <span></span>
-            </button>
-            <div class="brand-logo-container">
-                <div class="logo-icon-box">
-                    <img src="ShiftGrid logo.png" alt="ShiftGrid" onerror="this.style.display='none'; document.getElementById('fallbackLogoSvg').style.display='block';">
-                    <svg id="fallbackLogoSvg" style="display:none; width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.5;" viewBox="0 0 24 24">
-                        <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-                        <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-                        <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-                        <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-                    </svg>
-                </div>
-                <div class="brand-text">
-                    <span class="brand-name">ShiftGrid</span>
-                    <span class="brand-tagline">WORKSPACE NAV</span>
+            <div class="brand-cluster">
+                <button class="hamburger-btn" onclick="openSidePanel()" aria-label="Open menu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="14.5" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+                </button>
+                <div class="brand-divider"></div>
+                <div class="brand-logo-container">
+                    <div class="logo-icon-box">
+                        <img src="ShiftGrid logo.png" alt="ShiftGrid" onerror="this.style.display='none'; document.getElementById('fallbackLogoSvg').style.display='block';">
+                        <svg id="fallbackLogoSvg" style="display:none; width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2.5;" viewBox="0 0 24 24">
+                            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+                            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+                            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+                            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+                        </svg>
+                    </div>
+                    <div class="brand-text">
+                        <span class="brand-name">ShiftGrid</span>
+                        <span class="brand-tagline">WORKSPACE NAV</span>
+                    </div>
                 </div>
             </div>
         </div>
