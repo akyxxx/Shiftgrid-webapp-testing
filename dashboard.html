@@ -964,6 +964,17 @@
                 <div class="nav-edge-badge purple">+</div>
             </div>
 
+            <div class="nav-item" id="nav-item-adminpanel" onclick="window.location.href='admin.html'" style="display:none;">
+                <div class="nav-icon-box">
+                    <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>
+                </div>
+                <div class="nav-details">
+                    <span class="nav-title">Admin Panel</span>
+                    <span class="nav-subtitle">Manage Requests & Users</span>
+                </div>
+                <div class="nav-edge-badge" style="background:#2563eb;">🛡</div>
+            </div>
+
             <div class="nav-item" id="nav-item-settings" onclick="switchView('view-settings')" style="margin-top: auto;">
                 <div class="nav-icon-box">
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -1896,18 +1907,30 @@
         window.firebaseUser = null;
         window.firestoreDb = db;
 
+        const SUPER_ADMIN_EMAIL = "tharaka1998.me@gmail.com";
+
+        function updateAdminPanelNavVisibility(panelRole, isSuperAdminEmail) {
+            const navItem = document.getElementById('nav-item-adminpanel');
+            if (!navItem) return;
+            const hasPanelAccess = isSuperAdminEmail || ['staff', 'manager', 'admin', 'super_admin'].includes(panelRole);
+            navItem.style.display = hasPanelAccess ? '' : 'none';
+        }
+
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 window.firebaseUser = user;
                 document.getElementById('syncStatusText').innerText = "Synced";
                 updateAccountUI(user.displayName, user.email, user.photoURL, "EMPLOYEE");
+                updateAdminPanelNavVisibility(null, user.email === SUPER_ADMIN_EMAIL);
 
                 try {
                     const userDocRef = doc(db, "users", user.uid);
                     onSnapshot(userDocRef, (userDoc) => {
                         if (userDoc.exists()) {
                             const data = userDoc.data();
-                            
+
+                            updateAdminPanelNavVisibility(data.panelRole || null, user.email === SUPER_ADMIN_EMAIL);
+
                             // Check approval state safely — only gate users who actually requested the official template
                             if (data.templateRequested === true) {
                                 window.isUserApproved = data.approved === true || 
