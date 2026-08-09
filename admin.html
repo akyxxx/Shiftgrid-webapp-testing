@@ -537,10 +537,12 @@
                 return { canApprove: true, canReject: true, canAnnounce: true, canManageUsers: true, canManageRoles: true, isSuperAdmin: true };
             }
             if (panelRole === 'admin') {
-                return { canApprove: true, canReject: true, canAnnounce: true, canManageUsers: true, canManageRoles: false, isSuperAdmin: false };
+                // Admin gets full admin panel permissions, including granting panel roles to other users
+                return { canApprove: true, canReject: true, canAnnounce: true, canManageUsers: true, canManageRoles: true, isSuperAdmin: false };
             }
             if (panelRole === 'staff') {
-                return { canApprove: false, canReject: false, canAnnounce: true, canManageUsers: false, canManageRoles: false, isSuperAdmin: false };
+                // Staff sits under admin: can handle requests and announcements, but can't manage users or roles
+                return { canApprove: true, canReject: true, canAnnounce: true, canManageUsers: false, canManageRoles: false, isSuperAdmin: false };
             }
             if (panelRole === 'manager') {
                 // Manager can only approve template_access requests — never reject, never manage users
@@ -964,9 +966,11 @@
                                 <p>${u.email || 'No email'}</p>
                             </div>
                             <span class="role-pill">${role}</span>
+                            ${u.panelRole ? `<span class="role-pill" style="background:rgba(37,99,235,0.15); color:#60a5fa; margin-left:6px;">PANEL: ${u.panelRole.toUpperCase()}</span>` : ''}
                         </div>
                         <div class="card-actions">
                             <button class="btn-action-sm" onclick="promptChangeRole('${u.id}', '${nameEsc}', '${u.role || 'employee'}')">🔄 Role</button>
+                            ${(window.currentPermissions && window.currentPermissions.canManageRoles) ? `<button class="btn-action-sm" onclick="promptChangePanelRole('${u.id}', '${nameEsc}', '${u.panelRole || 'none'}', '${(u.email || '').replace(/'/g, "\\'")}')">🛡️ Panel Access</button>` : ''}
                             <button class="btn-action-sm" onclick="openEditProfileModal('${u.id}', '${nameEsc}', '${u.photoURL || ''}')">✏️ Edit Profile</button>
                             <button class="btn-action-sm danger" onclick="clearUserData('${u.id}', '${nameEsc}')">🗑️ Clear Data</button>
                         </div>
@@ -1004,6 +1008,42 @@
             } catch (error) {
                 console.error("Error updating role:", error);
                 alert("Failed to update role: " + error.message);
+            }
+        };
+
+        window.promptChangePanelRole = async function(uid, name, currentPanelRole, targetEmail) {
+            if (targetEmail === SUPER_ADMIN_EMAIL) {
+                alert("The super admin's access can't be changed here — it's locked to their account.");
+                return;
+            }
+            const newPanelRole = prompt(`Set ADMIN PANEL access for ${name}.\nType one of: none, staff, manager, admin\n(current: ${currentPanelRole})`, currentPanelRole === 'none' ? '' : currentPanelRole);
+            if (newPanelRole === null) return;
+            const normalized = newPanelRole.trim().toLowerCase();
+            const validRoles = ['none', 'staff', 'manager', 'admin', ''];
+            if (!validRoles.includes(normalized)) {
+                alert('Panel role must be one of: none, staff, manager, admin.');
+                return;
+            }
+            const finalRole = (normalized === '' || normalized === 'none') ? null : normalized;
+            try {
+                await setDoc(doc(db, "users", uid), {
+                    panelRole: finalRole,
+                    updatedAt: new Date().toISOString()
+                }, { merge: true });
+
+                await addDoc(collection(db, "notifications"), {
+                    uid: uid,
+                    type: "admin_message",
+                    title: "Admin Panel Access Updated",
+                    message: finalRole ? `You've been granted "${finalRole}" access to the admin panel.` : `Your admin panel access has been removed.`,
+                    read: false,
+                    createdAt: new Date().toISOString()
+                });
+
+                alert(`Panel access updated for ${name}.`);
+            } catch (error) {
+                console.error("Error updating panel role:", error);
+                alert("Failed to update panel access: " + error.message);
             }
         };
 
