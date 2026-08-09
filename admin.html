@@ -511,7 +511,7 @@
             <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyA93AnibNs8iaNwYuy1tJglGXXqeY6p2oo",
@@ -659,8 +659,10 @@
             filtered.forEach(req => {
                 const status = req.status || 'pending';
                 const statusClass = status === 'approved' ? 'status-approved' : (status === 'rejected' ? 'status-rejected' : 'status-pending');
-                const userDisplayName = req.userName || req.userEmail || 'Unknown User';
                 const userId = req.userId || req.uid || req.id;
+                const matchedUser = allUsers.find(u => u.id === userId);
+                const reqEmail = req.userEmail || req.email || (matchedUser && matchedUser.email) || '';
+                const userDisplayName = req.userName || (matchedUser && matchedUser.displayName) || reqEmail || 'Unknown User';
                 const isManagerReq = req.requestType === 'manager_role';
                 const requestTypeLabel = isManagerReq ? 'Manager Role Request' : 'Template Access Request';
                 const submittedAt = req.createdAt ? new Date(req.createdAt).toLocaleString() : 'Unknown time';
@@ -679,7 +681,7 @@
                         <div class="card-header">
                             <div class="user-info">
                                 <h3>${userDisplayName}</h3>
-                                <p>${req.userEmail || 'No Email Registered'}</p>
+                                <p>${reqEmail || 'No Email Registered'}</p>
                             </div>
                             <span class="status-badge ${statusClass}">${status}</span>
                         </div>
@@ -973,6 +975,7 @@
                             ${(window.currentPermissions && window.currentPermissions.canManageRoles) ? `<button class="btn-action-sm" onclick="promptChangePanelRole('${u.id}', '${nameEsc}', '${u.panelRole || 'none'}', '${(u.email || '').replace(/'/g, "\\'")}')">🛡️ Panel Access</button>` : ''}
                             <button class="btn-action-sm" onclick="openEditProfileModal('${u.id}', '${nameEsc}', '${u.photoURL || ''}')">✏️ Edit Profile</button>
                             <button class="btn-action-sm danger" onclick="clearUserData('${u.id}', '${nameEsc}')">🗑️ Clear Data</button>
+                            ${(window.currentPermissions && window.currentPermissions.canManageUsers) ? `<button class="btn-action-sm danger" onclick="deleteUserRecord('${u.id}', '${nameEsc}', '${(u.email || '').replace(/'/g, "\\'")}')">❌ Delete User</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -1044,6 +1047,21 @@
             } catch (error) {
                 console.error("Error updating panel role:", error);
                 alert("Failed to update panel access: " + error.message);
+            }
+        };
+
+        window.deleteUserRecord = async function(uid, name, email) {
+            if (email === SUPER_ADMIN_EMAIL) {
+                alert("The super admin's record can't be deleted here.");
+                return;
+            }
+            if (!confirm(`Permanently delete ${name}'s record from the app database?\n\nNote: this removes their app profile, shift data, and admin panel access — but does NOT delete their sign-in account. If they were removed from Firebase Authentication too, this fully clears them from ShiftGrid. If not, they can still log in and a fresh profile will be created.\n\nThis cannot be undone.`)) return;
+            try {
+                await deleteDoc(doc(db, "users", uid));
+                alert(`${name} has been deleted from the app database.`);
+            } catch (error) {
+                console.error("Error deleting user:", error);
+                alert("Failed to delete user: " + error.message);
             }
         };
 
