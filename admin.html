@@ -177,6 +177,31 @@
             outline: none;
         }
 
+        .role-select {
+            background: var(--card-inner);
+            border: 1px solid var(--card-border);
+            color: #ffffff;
+            padding: 10px 12px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            outline: none;
+            flex: 1;
+            min-width: 110px;
+        }
+
+        .role-select:disabled {
+            opacity: 0.5;
+        }
+
+        .role-select-label {
+            font-size: 10px;
+            color: var(--text-dim, #8b9d93);
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: block;
+        }
+
         .tabs-container {
             display: flex;
             gap: 6px;
@@ -428,6 +453,7 @@
               <span id="liveStatus">Live Sync</span>
             </div>
           </div>
+          <button class="btn-action-sm" style="margin-top:10px;" onclick="window.location.href='dashboard.html'">← Back to Dashboard</button>
           <!-- Metrics Bar -->
           <div class="metrics-grid">
             <div class="metric-card">
@@ -958,6 +984,32 @@
                     ? `<img src="${u.photoURL}" alt="">`
                     : getInitials(displayName);
                 const nameEsc = displayName.replace(/'/g, "\\'");
+                const emailEsc = (u.email || '').replace(/'/g, "\\'");
+                const isThisSuperAdmin = u.email === SUPER_ADMIN_EMAIL;
+                const currentRoleVal = (u.role || 'employee').toLowerCase();
+                const currentPanelVal = u.panelRole || 'none';
+                const canManageRoles = window.currentPermissions && window.currentPermissions.canManageRoles;
+
+                const roleSelectHtml = `
+                    <div>
+                        <label class="role-select-label">Role</label>
+                        <select class="role-select" ${isThisSuperAdmin ? 'disabled' : ''} onchange="applyRoleChange(this, '${u.id}', '${nameEsc}')">
+                            <option value="employee" ${currentRoleVal === 'employee' ? 'selected' : ''}>Employee</option>
+                            <option value="manager" ${currentRoleVal === 'manager' ? 'selected' : ''}>Manager</option>
+                        </select>
+                    </div>`;
+
+                const panelSelectHtml = canManageRoles ? `
+                    <div>
+                        <label class="role-select-label">Panel Access</label>
+                        <select class="role-select" ${isThisSuperAdmin ? 'disabled' : ''} onchange="applyPanelRoleChange(this, '${u.id}', '${nameEsc}', '${emailEsc}')">
+                            <option value="none" ${currentPanelVal === 'none' ? 'selected' : ''}>None</option>
+                            <option value="staff" ${currentPanelVal === 'staff' ? 'selected' : ''}>Staff</option>
+                            <option value="manager" ${currentPanelVal === 'manager' ? 'selected' : ''}>Manager</option>
+                            <option value="admin" ${currentPanelVal === 'admin' ? 'selected' : ''}>Admin</option>
+                            ${isThisSuperAdmin ? `<option value="super_admin" selected>Super Admin</option>` : ''}
+                        </select>
+                    </div>` : '';
 
                 return `
                     <div class="request-card">
@@ -970,30 +1022,26 @@
                             <span class="role-pill">${role}</span>
                             ${u.panelRole ? `<span class="role-pill" style="background:rgba(37,99,235,0.15); color:#60a5fa; margin-left:6px;">PANEL: ${u.panelRole.toUpperCase()}</span>` : ''}
                         </div>
-                        <div class="card-actions">
-                            <button class="btn-action-sm" onclick="promptChangeRole('${u.id}', '${nameEsc}', '${u.role || 'employee'}')">🔄 Role</button>
-                            ${(window.currentPermissions && window.currentPermissions.canManageRoles) ? `<button class="btn-action-sm" onclick="promptChangePanelRole('${u.id}', '${nameEsc}', '${u.panelRole || 'none'}', '${(u.email || '').replace(/'/g, "\\'")}')">🛡️ Panel Access</button>` : ''}
+                        <div class="card-actions" style="flex-wrap:wrap; align-items:flex-end;">
+                            ${roleSelectHtml}
+                            ${panelSelectHtml}
                             <button class="btn-action-sm" onclick="openEditProfileModal('${u.id}', '${nameEsc}', '${u.photoURL || ''}')">✏️ Edit Profile</button>
                             <button class="btn-action-sm danger" onclick="clearUserData('${u.id}', '${nameEsc}')">🗑️ Clear Data</button>
-                            ${(window.currentPermissions && window.currentPermissions.canManageUsers) ? `<button class="btn-action-sm danger" onclick="deleteUserRecord('${u.id}', '${nameEsc}', '${(u.email || '').replace(/'/g, "\\'")}')">❌ Delete User</button>` : ''}
+                            ${(window.currentPermissions && window.currentPermissions.canManageUsers) ? `<button class="btn-action-sm danger" onclick="deleteUserRecord('${u.id}', '${nameEsc}', '${emailEsc}')">❌ Delete User</button>` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
         };
 
-        window.promptChangeRole = async function(uid, name, currentRole) {
-            const newRole = prompt(`Set role for ${name} (type "employee" or "manager"):`, currentRole);
-            if (!newRole) return;
-            const normalized = newRole.trim().toLowerCase();
-            if (normalized !== 'employee' && normalized !== 'manager') {
-                alert('Role must be "employee" or "manager".');
-                return;
-            }
+        window.applyRoleChange = async function(selectEl, uid, name) {
+            const normalized = selectEl.value;
+            const previousValue = selectEl.dataset.prevValue || normalized;
+            selectEl.disabled = true;
             try {
                 await setDoc(doc(db, "users", uid), {
                     role: normalized,
-                    managerStatus: normalized === 'manager' ? 'approved' : 'approved',
+                    managerStatus: 'approved',
                     managerRoleRequested: false,
                     updatedAt: new Date().toISOString()
                 }, { merge: true });
@@ -1006,28 +1054,25 @@
                     read: false,
                     createdAt: new Date().toISOString()
                 });
-
-                alert(`Role updated for ${name}.`);
             } catch (error) {
                 console.error("Error updating role:", error);
                 alert("Failed to update role: " + error.message);
+                selectEl.value = previousValue;
+            } finally {
+                selectEl.disabled = false;
+                selectEl.dataset.prevValue = selectEl.value;
             }
         };
 
-        window.promptChangePanelRole = async function(uid, name, currentPanelRole, targetEmail) {
+        window.applyPanelRoleChange = async function(selectEl, uid, name, targetEmail) {
             if (targetEmail === SUPER_ADMIN_EMAIL) {
                 alert("The super admin's access can't be changed here — it's locked to their account.");
                 return;
             }
-            const newPanelRole = prompt(`Set ADMIN PANEL access for ${name}.\nType one of: none, staff, manager, admin\n(current: ${currentPanelRole})`, currentPanelRole === 'none' ? '' : currentPanelRole);
-            if (newPanelRole === null) return;
-            const normalized = newPanelRole.trim().toLowerCase();
-            const validRoles = ['none', 'staff', 'manager', 'admin', ''];
-            if (!validRoles.includes(normalized)) {
-                alert('Panel role must be one of: none, staff, manager, admin.');
-                return;
-            }
-            const finalRole = (normalized === '' || normalized === 'none') ? null : normalized;
+            const normalized = selectEl.value;
+            const previousValue = selectEl.dataset.prevValue || normalized;
+            const finalRole = normalized === 'none' ? null : normalized;
+            selectEl.disabled = true;
             try {
                 await setDoc(doc(db, "users", uid), {
                     panelRole: finalRole,
@@ -1042,11 +1087,13 @@
                     read: false,
                     createdAt: new Date().toISOString()
                 });
-
-                alert(`Panel access updated for ${name}.`);
             } catch (error) {
                 console.error("Error updating panel role:", error);
                 alert("Failed to update panel access: " + error.message);
+                selectEl.value = previousValue;
+            } finally {
+                selectEl.disabled = false;
+                selectEl.dataset.prevValue = selectEl.value;
             }
         };
 
